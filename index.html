@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ITS Adaptativo · David Pillco</title>
+
+  <!-- Fuentes: JetBrains Mono (código) + DM Sans (UI) -->
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── Variables globales ─────────────────────────── */
+    :root {
+      --bg:        #0e0f11;
+      --surface:   #16181c;
+      --surface2:  #1e2026;
+      --border:    #2a2d35;
+      --accent:    #5b6af0;
+      --accent2:   #8b5cf6;
+      --success:   #22c55e;
+      --warning:   #f59e0b;
+      --danger:    #ef4444;
+      --text:      #e8eaf0;
+      --muted:     #6b7280;
+      --font-ui:   'DM Sans', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+      --radius:    8px;
+    }
+
+    /* ── Reset ──────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: var(--font-ui); font-size: 14px; }
+
+    /* ── Layout principal ───────────────────────────── */
+    .app {
+      display: grid;
+      grid-template-columns: 320px 1fr 300px;
+      grid-template-rows: 48px 1fr 48px;
+      height: 100vh;
+      gap: 1px;
+      background: var(--border);
+    }
+
+    /* ── Topbar ─────────────────────────────────────── */
+    .topbar {
+      grid-column: 1 / -1;
+      background: var(--surface);
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      gap: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .topbar-logo {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--accent);
+      letter-spacing: 0.05em;
+    }
+    .topbar-sep { width: 1px; height: 20px; background: var(--border); }
+    .topbar-title { font-size: 13px; color: var(--muted); }
+    .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+
+    /* Indicador de perfil activo en topbar */
+    .profile-indicator {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 12px;
+      font-family: var(--font-mono);
+      color: var(--muted);
+    }
+    .profile-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      transition: background 0.3s;
+    }
+    #profile-label { transition: color 0.3s; }
+
+    /* ── Panel izquierdo: reto ──────────────────────── */
+    .panel-challenge {
+      background: var(--surface);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      overflow-y: auto;
+    }
+    .panel-label {
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+    .challenge-type-badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 500;
+      font-family: var(--font-mono);
+      padding: 3px 8px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      letter-spacing: 0.08em;
+    }
+    .challenge-title {
+      font-size: 18px;
+      font-weight: 500;
+      line-height: 1.3;
+      color: var(--text);
+    }
+    .challenge-description {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.7;
+      white-space: pre-line;
+    }
+    .concepts-row { display: flex; flex-wrap: wrap; gap: 6px; }
+    .concept-tag {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      padding: 2px 7px;
+      border-radius: 4px;
+      background: var(--surface2);
+      color: var(--accent);
+      border: 1px solid var(--border);
+    }
+    .panel-divider { height: 1px; background: var(--border); }
+
+    /* Métricas de sesión en tiempo real */
+    .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .metric-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+    }
+    .metric-label { font-size: 10px; color: var(--muted); letter-spacing: 0.06em; margin-bottom: 4px; text-transform: uppercase; }
+    .metric-value { font-size: 18px; font-weight: 500; font-family: var(--font-mono); color: var(--text); }
+    .metric-value.danger  { color: var(--danger); }
+    .metric-value.warning { color: var(--warning); }
+    .metric-value.success { color: var(--success); }
+
+    /* Barra de rasgos Alternative Five */
+    .traits-section { display: flex; flex-direction: column; gap: 8px; }
+    .trait-row { display: flex; align-items: center; gap: 10px; }
+    .trait-name { font-size: 11px; font-family: var(--font-mono); color: var(--muted); width: 44px; flex-shrink: 0; }
+    .trait-bar-bg { flex: 1; height: 4px; background: var(--surface2); border-radius: 2px; overflow: hidden; }
+    .trait-bar-fill { height: 100%; border-radius: 2px; transition: width 0.5s ease; }
+    .trait-val { font-size: 11px; font-family: var(--font-mono); color: var(--muted); width: 28px; text-align: right; }
+
+    /* ── Panel central: editor ──────────────────────── */
+    .panel-editor {
+      background: #1e1e1e;
+      display: flex;
+      flex-direction: column;
+    }
+    #editor-container { flex: 1; }
+
+    /* ── Panel derecho: tutor ───────────────────────── */
+    .panel-tutor {
+      background: var(--surface);
+      display: flex;
+      flex-direction: column;
+    }
+    .tutor-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .tutor-header-label { font-size: 12px; font-weight: 500; color: var(--text); }
+    .tutor-status-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--success);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.4; }
+    }
+
+    /* Burbújas de chat */
+    #tutor-chat {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+    .tutor-bubble, .student-bubble {
+      max-width: 90%;
+      padding: 10px 12px;
+      border-radius: var(--radius);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    .tutor-bubble {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      align-self: flex-start;
+    }
+    .student-bubble {
+      background: var(--accent);
+      color: #fff;
+      align-self: flex-end;
+    }
+    .tutor-label {
+      display: block;
+      font-size: 10px;
+      font-family: var(--font-mono);
+      color: var(--muted);
+      margin-bottom: 5px;
+      letter-spacing: 0.06em;
+    }
+    .tutor-label--auto { color: var(--warning); }
+
+    /* Estilos de burbuja según perfil */
+    .tutor-bubble--bloqueado  { border-color: #ef444450; }
+    .tutor-bubble--ansioso    { border-color: #f59e0b50; }
+    .tutor-bubble--impaciente { border-color: #f59e0b50; }
+    .tutor-bubble--explorador { border-color: #5b6af050; }
+    .tutor-bubble--fluido     { border-color: #22c55e50; }
+
+    /* Input del chat */
+    .tutor-input-row {
+      padding: 12px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 8px;
+    }
+    #chat-input {
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 8px 10px;
+      font-family: var(--font-ui);
+      font-size: 12px;
+      color: var(--text);
+      outline: none;
+      resize: none;
+      height: 36px;
+    }
+    #chat-input::placeholder { color: var(--muted); }
+    #chat-input:focus { border-color: var(--accent); }
+
+    /* ── Bottombar ──────────────────────────────────── */
+    .bottombar {
+      grid-column: 1 / -1;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      gap: 10px;
+    }
+
+    /* Botones de acción */
+    .btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 14px;
+      height: 30px;
+      border-radius: var(--radius);
+      font-family: var(--font-ui);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text);
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .btn:hover { background: var(--surface2); }
+    .btn--run {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    .btn--run:hover { background: #4a59df; border-color: #4a59df; }
+    .btn--submit {
+      background: transparent;
+      border-color: var(--success);
+      color: var(--success);
+    }
+    .btn--submit:hover { background: #22c55e18; }
+    .btn--hint { color: var(--muted); }
+
+    /* Indicador de estado de ejecución */
+    .run-status {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--muted);
+      margin-left: 4px;
+    }
+    .run-status.success { color: var(--success); }
+    .run-status.error   { color: var(--danger); }
+
+    /* Separador bottombar */
+    .bottombar-sep { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+    .session-time { font-size: 11px; font-family: var(--font-mono); color: var(--muted); }
+
+    /* ── Loading overlay ────────────────────────────── */
+    #loading {
+      position: fixed; inset: 0;
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 16px;
+      z-index: 999;
+      transition: opacity 0.4s;
+    }
+    #loading.hidden { opacity: 0; pointer-events: none; }
+    .loading-text { font-size: 13px; font-family: var(--font-mono); color: var(--muted); }
+    .loading-bar { width: 120px; height: 2px; background: var(--border); border-radius: 1px; overflow: hidden; }
+    .loading-fill { height: 100%; width: 30%; background: var(--accent); border-radius: 1px; animation: load 1.2s ease-in-out infinite; }
+    @keyframes load { 0%{width:10%} 50%{width:80%} 100%{width:10%} }
+  </style>
+</head>
+<body>
+
+<!-- Loading overlay mientras Monaco se inicializa -->
+<div id="loading">
+  <span class="loading-text">iniciando entorno de programación...</span>
+  <div class="loading-bar"><div class="loading-fill"></div></div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     LAYOUT PRINCIPAL
+════════════════════════════════════════════════════════ -->
+<div class="app">
+
+  <!-- ── Topbar ─────────────────────────────────────── -->
+  <header class="topbar">
+    <span class="topbar-logo">ITS·adaptativo</span>
+    <div class="topbar-sep"></div>
+    <span class="topbar-title">Sistemas Adaptativos y Modelado de Usuarios</span>
+    <div class="topbar-right">
+      <div class="profile-indicator">
+        <div class="profile-dot" id="profile-dot"></div>
+        perfil: <span id="profile-label">fluido</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── Panel izquierdo: reto activo ───────────────── -->
+  <aside class="panel-challenge">
+
+    <span class="panel-label">Reto activo</span>
+    <span class="challenge-type-badge" id="challenge-type">CREAR</span>
+    <h2 class="challenge-title" id="challenge-title">Cargando reto...</h2>
+    <p class="challenge-description" id="challenge-description"></p>
+
+    <div class="concepts-row" id="concepts-row"></div>
+
+    <div class="panel-divider"></div>
+
+    <!-- Métricas de sesión en tiempo real -->
+    <span class="panel-label">Métricas de sesión</span>
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-label">Ejecuciones</div>
+        <div class="metric-value" id="m-exec">0</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Errores sint.</div>
+        <div class="metric-value" id="m-syntax">0</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Think time</div>
+        <div class="metric-value" id="m-think">—</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Nivel inferido</div>
+        <div class="metric-value success" id="m-level">medio</div>
+      </div>
+    </div>
+
+    <div class="panel-divider"></div>
+
+    <!-- Barras de rasgos Alternative Five -->
+    <span class="panel-label">Rasgos inferidos</span>
+    <div class="traits-section">
+      <div class="trait-row">
+        <span class="trait-name">Act</span>
+        <div class="trait-bar-bg"><div class="trait-bar-fill" id="bar-act" style="width:0%;background:#5b6af0"></div></div>
+        <span class="trait-val" id="val-act">0.00</span>
+      </div>
+      <div class="trait-row">
+        <span class="trait-name">ImpSS</span>
+        <div class="trait-bar-bg"><div class="trait-bar-fill" id="bar-imp" style="width:0%;background:#f59e0b"></div></div>
+        <span class="trait-val" id="val-imp">0.00</span>
+      </div>
+      <div class="trait-row">
+        <span class="trait-name">N-Anx</span>
+        <div class="trait-bar-bg"><div class="trait-bar-fill" id="bar-nanx" style="width:0%;background:#ef4444"></div></div>
+        <span class="trait-val" id="val-nanx">0.00</span>
+      </div>
+      <div class="trait-row">
+        <span class="trait-name">Agg</span>
+        <div class="trait-bar-bg"><div class="trait-bar-fill" id="bar-agg" style="width:0%;background:#8b5cf6"></div></div>
+        <span class="trait-val" id="val-agg">0.00</span>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- ── Panel central: editor Monaco ───────────────── -->
+  <main class="panel-editor">
+    <div id="editor-container"></div>
+  </main>
+
+  <!-- ── Panel derecho: tutor ───────────────────────── -->
+  <aside class="panel-tutor">
+    <div class="tutor-header">
+      <div class="tutor-status-dot"></div>
+      <span class="tutor-header-label">Tutor adaptativo</span>
+    </div>
+
+    <!-- Historial de mensajes del tutor -->
+    <div id="tutor-chat"></div>
+
+    <!-- Input para preguntarle al tutor -->
+    <div class="tutor-input-row">
+      <textarea id="chat-input" placeholder="Escribe una pregunta al tutor..."></textarea>
+      <button class="btn" onclick="handleChatSend()">↑</button>
+    </div>
+  </aside>
+
+  <!-- ── Bottombar: acciones ────────────────────────── -->
+  <footer class="bottombar">
+    <!-- Ejecutar código -->
+    <button class="btn btn--run" onclick="handleRun()">
+      ▶ Ejecutar
+    </button>
+
+    <!-- Pedir pista al tutor -->
+    <button class="btn btn--hint" onclick="handleHint()">
+      ⊙ Pista
+    </button>
+
+    <!-- Entregar solución -->
+    <button class="btn btn--submit" onclick="handleSubmit()">
+      ✓ Entregar
+    </button>
+
+    <!-- Estado de la última ejecución -->
+    <span class="run-status" id="run-status"></span>
+
+    <!-- Separador derecho -->
+    <div class="bottombar-sep">
+      <span class="session-time" id="session-clock">00:00</span>
+    </div>
+  </footer>
+
+</div><!-- /.app -->
+
+
+<!-- ══════════════════════════════════════════════════════
+     SCRIPTS — orden importante: config → modelo → inferencia
+     → tutor → retos → monaco (al final porque es async)
+════════════════════════════════════════════════════════ -->
+<script src="config.js"></script>
+<script src="userModel.js"></script>
+<script src="inference.js"></script>
+<script src="tutor.js"></script>
+<script src="challenges.js"></script>
+
+<!-- Monaco loader -->
+<!-- Skulpt: intérprete de Python real en el navegador -->
+<script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt-stdlib.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/monaco-editor/min/vs/loader.js"></script>
+
+<script>
+// ── Variable global del editor ──────────────────────────
+// Se declara fuera para que challenges.js pueda acceder a ella
+// con monacoEditor.getValue() y monacoEditor.setValue().
+let monacoEditor = null;
+
+// ── Inicializar Monaco ──────────────────────────────────
+require.config({
+  paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor/min/vs' }
+});
+
+require(['vs/editor/editor.main'], function () {
+
+  monacoEditor = monaco.editor.create(
+    document.getElementById('editor-container'), {
+      language:        'python',
+      theme:           'vs-dark',
+      fontSize:        13,
+      fontFamily:      'JetBrains Mono, monospace',
+      minimap:         { enabled: false },
+      scrollBeyondLastLine: false,
+      lineNumbers:     'on',
+      renderLineHighlight: 'line',
+      padding:         { top: 16 },
+    }
+  );
+
+  // Arrancar el reloj cuando el estudiante presiona una tecla real.
+  // onKeyDown solo se dispara con teclas del teclado, nunca con setValue().
+  monacoEditor.onKeyDown(() => {
+    arrancarReloj();
+  });
+
+  // Escuchar cambios en el editor → registrar en el modelo de usuario
+  monacoEditor.onDidChangeModelContent(event => {
+    onCodeEdit(event); // definida en userModel.js
+  });
+
+  // Monaco listo: ocultar loading, iniciar sesión, cargar primer reto
+  document.getElementById('loading').classList.add('hidden');
+  initSession();          // userModel.js — inicia el modelo y el idle detector
+
+  // Forzar nivel "bajo" en la primera carga para que nuevos estudiantes
+  // siempre empiecen con retos de nivel básico, independientemente del
+  // valor por defecto de competenceLevel en userModel.
+  userModel.competenceLevel = "bajo";
+  loadChallenge(userModel); // challenges.js — carga el primer reto adaptativo
+  startSessionClock();    // reloj de sesión en la bottombar
+
+  console.log('[ITS] Sistema iniciado correctamente.');
+});
+
+
+// ── Ejecución real de Python con Skulpt ────────────────
+// Skulpt es un intérprete de Python escrito en JavaScript.
+// Ejecuta el código real del estudiante en el navegador,
+// captura el output y devuelve errores reales de Python.
+function runPython(code) {
+  return new Promise((resolve) => {
+    let output = '';
+
+    // Configurar Skulpt: cómo capturar el print() del estudiante
+    Sk.configure({
+      output: (text) => { output += text; },
+      read:   (file) => {
+        if (Sk.builtinFiles?.files[file] === undefined) {
+          throw new Error('File not found: ' + file);
+        }
+        return Sk.builtinFiles.files[file];
+      },
+      execLimit: 5000, // límite de 5 segundos para evitar bucles infinitos
+    });
+
+    // Ejecutar el código y resolver la promesa con el resultado
+    Sk.misceval.asyncToPromise(() =>
+      Sk.importMainWithBody('<stdin>', false, code, true)
+    ).then(() => {
+      resolve({ success: true, output: output.trim(), error: null });
+    }).catch((err) => {
+      // Skulpt devuelve el error real de Python con línea y tipo
+      const msg = err.toString()
+        .replace('js error', '')
+        .replace('Traceback (most recent call last):', '')
+        .trim();
+      resolve({ success: false, output: output.trim(), error: msg });
+    });
+  });
+}
+
+// ── Manejador: Ejecutar código ──────────────────────────
+// Ejecuta Python real con Skulpt y muestra el resultado
+// y los errores reales en la interfaz.
+async function handleRun() {
+  if (!monacoEditor) return;
+
+  const code     = monacoEditor.getValue();
+  const statusEl = document.getElementById('run-status');
+
+  // Indicar que está corriendo
+  statusEl.textContent = '... ejecutando';
+  statusEl.className   = 'run-status';
+
+  // Ejecutar con Skulpt — Python real
+  const result = await runPython(code);
+
+  const hasError  = !result.success;
+  const errorType = hasError ? 'syntax' : 'none';
+
+  // Registrar la ejecución en el modelo de usuario
+  onCodeRun(code, hasError, errorType); // userModel.js
+
+  // Mostrar resultado en la bottombar
+  if (result.success) {
+    // Mostrar el output del print() si lo hay
+    const outputMsg = result.output
+      ? '✓ ' + result.output
+      : '✓ ejecutado correctamente (sin output)';
+    statusEl.textContent = outputMsg;
+    statusEl.className   = 'run-status success';
+  } else {
+    // Mostrar el error real de Python
+    statusEl.textContent = '✗ ' + result.error;
+    statusEl.className   = 'run-status error';
+  }
+
+  updateUI();
+}
+
+
+// ── Manejador: Pedir pista ──────────────────────────────
+async function handleHint() {
+  onHintRequested(); // userModel.js
+
+  // Construir mensaje de pista contextual con el reto actual
+  const reto = challengeState.currentChallenge;
+  const msg  = reto
+    ? `El estudiante pide una pista para el reto: "${reto.titulo}". Conceptos: ${reto.conceptos.join(', ')}.`
+    : 'El estudiante pide una pista general.';
+
+  const respuesta = await askTutor(msg, userModel); // tutor.js
+  displayTutorMessage(respuesta, userModel.activeProfile, false); // tutor.js
+  updateUI();
+}
+
+
+// ── Manejador: Entregar solución ────────────────────────
+function handleSubmit() {
+  if (!monacoEditor) return;
+  const code = monacoEditor.getValue();
+
+  // Evaluar si el código resuelve el reto (challenges.js)
+  const result = evaluateSubmission(code, userModel);
+
+  if (result.passed) {
+    displayTutorMessage(result.feedback, 'fluido', false);
+    onChallengeCompleted(userModel); // carga el siguiente reto
+  } else {
+    displayTutorMessage(result.feedback, userModel.activeProfile, false);
+  }
+}
+
+
+// ── Manejador: Chat con el tutor ────────────────────────
+async function handleChatSend() {
+  const input = document.getElementById('chat-input');
+  const texto = input.value.trim();
+  if (!texto) return;
+
+  input.value = '';
+  await sendStudentMessage(texto); // tutor.js
+}
+
+// Enviar con Enter (Shift+Enter = salto de línea)
+document.getElementById('chat-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    handleChatSend();
+  }
+});
+
+
+// ── Actualizar UI con el estado actual del modelo ───────
+// Se llama después de cada ejecución para reflejar los valores
+// más recientes de rasgos, perfil y métricas en el panel izquierdo.
+function updateUI() {
+  const m = userModel;
+  const t = m.currentTraits || { act: 0, imp: 0, nanx: 0, agg: 0 };
+
+  // Métricas numéricas
+  document.getElementById('m-exec').textContent   = m.execCount;
+  document.getElementById('m-syntax').textContent = m.syntaxErrors;
+  document.getElementById('m-think').textContent  =
+    m.avgThinkTime > 0 ? m.avgThinkTime.toFixed(1) + 's' : '—';
+  document.getElementById('m-level').textContent  = m.competenceLevel;
+
+  // Barras de rasgos Alternative Five
+  updateBar('act',  t.act);
+  updateBar('imp',  t.imp);
+  updateBar('nanx', t.nanx);
+  updateBar('agg',  t.agg);
+
+  // Indicador de perfil en topbar
+  document.getElementById('profile-label').textContent = m.activeProfile;
+  document.getElementById('profile-dot').style.background = profileColor(m.activeProfile);
+
+  // Color del nivel inferido
+  const lvlEl = document.getElementById('m-level');
+  lvlEl.className = 'metric-value ' + {
+    bajo: 'warning', medio: 'success', alto: 'success'
+  }[m.competenceLevel] || '';
+}
+
+function updateBar(id, value) {
+  const pct = (value * 100).toFixed(0) + '%';
+  document.getElementById('bar-' + id).style.width = pct;
+  document.getElementById('val-' + id).textContent = value.toFixed(2);
+}
+
+// Color del punto de perfil según estado emocional
+function profileColor(perfil) {
+  return {
+    fluido:        '#22c55e',
+    explorador:    '#5b6af0',
+    perfeccionista:'#60a5fa',
+    ansioso:       '#f59e0b',
+    bloqueado:     '#ef4444',
+    impaciente:    '#f97316',
+    desenganchado: '#6b7280',
+  }[perfil] || '#22c55e';
+}
+
+// Actualizar también los tags de conceptos cuando cambia el reto
+function updateChallengeUI(reto) {
+  const row = document.getElementById('concepts-row');
+  if (!row || !reto) return;
+  row.innerHTML = reto.conceptos
+    .map(c => `<span class="concept-tag">${c}</span>`)
+    .join('');
+}
+
+
+// ── Reloj de sesión ──────────────────────────────────────
+// El reloj arranca desde el PRIMER EDIT del estudiante, no desde
+// que carga la página. Así mide el tiempo de trabajo activo real.
+// Reloj de sesión — arranca con la primera tecla real del estudiante.
+// Usa window para garantizar acceso global entre todos los callbacks.
+window._clockStarted = false;
+
+function startSessionClock() {
+  // No hace nada aquí — el reloj arranca desde arrancarReloj().
+}
+
+function arrancarReloj() {
+  if (window._clockStarted) return; // ya arrancó, no reiniciar
+  window._clockStarted = true;
+
+  const el    = document.getElementById('session-clock');
+  if (!el) return;
+
+  const inicio = Date.now();
+  console.log('[ITS] Reloj arrancado:', new Date(inicio).toLocaleTimeString());
+
+  setInterval(() => {
+    const secs = Math.floor((Date.now() - inicio) / 1000);
+    const mm   = String(Math.floor(secs / 60)).padStart(2, '0');
+    const ss   = String(secs % 60).padStart(2, '0');
+    el.textContent = mm + ':' + ss;
+  }, 1000);
+}
+</script>
+
+</body>
+</html>
