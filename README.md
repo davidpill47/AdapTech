@@ -1,4 +1,4 @@
-# adaptech 🎓
+# adaptech
 
 **Sistema de Tutoría Inteligente (ITS) Adaptativo para la enseñanza de Python**
 
@@ -42,7 +42,7 @@ tutor.js genera respuesta pedagógica vía Gemini API
 
 | Perfil | Condición | Acción del sistema |
 |--------|-----------|-------------------|
-| Bloqueado ⚠️ | N-Anx > 0.6 y Agg > 0.55 | Baja nivel + intervención inmediata |
+| Bloqueado | N-Anx > 0.6 y Agg > 0.55 | Baja nivel + intervención inmediata |
 | Impaciente | Act > 0.6, Imp > 0.6, N-Anx > 0.45 | Propone estrategia diferente |
 | Ansioso | N-Anx > 0.6 y Agg < 0.3 | Pista empática ante idle > 90s |
 | Explorador | Act > 0.6 y Imp > 0.6 | Sube dificultad, reta a reflexionar |
@@ -100,7 +100,7 @@ Puedes obtenerla gratis en [aistudio.google.com](https://aistudio.google.com) �
 
 Abre `index.html` directamente en el navegador. No necesitas servidor local.
 
-> ⚠️ **Nunca subas `config.js` a un repositorio público.** El archivo está en `.gitignore` por defecto.
+> **Nunca subas `config.js` a un repositorio público.** El archivo está en `.gitignore` por defecto.
 
 ---
 
